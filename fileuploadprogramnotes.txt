@@ -1,0 +1,235 @@
+file-upload.jsp==========================
+
+<%@ page language="java" contentType="text/html; charset=ISO-8859-1"
+ pageEncoding="ISO-8859-1"%>
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+    "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>File Upload Servlet JSP JDBC MySQL Example</title>
+<link
+ href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+ rel="stylesheet"
+ integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+ crossorigin="anonymous">
+</head>
+<body>
+
+ <div class="container col-lg-6">
+  <h1 class="text-center">File Upload to Database Example - Servlet JSP JDBC MySQL </h1>
+  <div class="card">
+   <div class="card-body">
+    <form method="post" class="form-group" action="uploadServlet"
+     enctype="multipart/form-data">
+     <div class="form-group">
+      <label for="first name">First Name: </label> <input type="text"
+       class="form-control" name="firstName" size="50" />
+     </div>
+     <div class="form-group">
+      <label for="last name">Last Name: </label> <input type="text"
+       class="form-control" name="lastName" size="50" />
+     </div>
+
+     <div class="form-group">
+      <label for="Profile Photo">Profile Photo:</label> <input
+       type="file" name="photo" size="50" />
+     </div>
+     <input type="submit" value="Save" class="btn btn-success">
+    </form>
+   </div>
+  </div>
+ </div>
+</body>
+</html>
+
+
+
+message.jsp==============================
+
+<%@ page language="java" contentType="text/html; charset=ISO-8859-1"
+ pageEncoding="ISO-8859-1"%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+    "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>Success massage</title>
+<link
+ href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+ rel="stylesheet"
+ integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+ crossorigin="anonymous">
+</head>
+<body>
+ <center>
+  <div class="alert alert-success">
+   <strong><%=request.getAttribute("Message")%></strong>
+  </div>
+ </center>
+</body>
+</html>
+
+
+web.xml===================================
+
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://xmlns.jcp.org/xml/ns/javaee" xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_4_0.xsd" version="4.0">
+  <display-name>excel_file_upload</display-name>
+  <welcome-file-list>
+
+    <welcome-file>file-upload.jsp</welcome-file>
+
+  </welcome-file-list>
+  
+
+   <servlet>
+        <servlet-name>UploadServlet</servlet-name>
+        <servlet-class>com.jayam.UploadServlet</servlet-class>
+    </servlet>
+    <servlet>
+        <servlet-name>FileUploadDao</servlet-name>
+        <servlet-class>com.dao.FileUploadDao</servlet-class>
+    </servlet>
+  
+
+ </web-app>
+ 
+ 
+
+FileUplaodDao.java============================
+
+package com.dao;
+
+import java.io.InputStream;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+
+public class FileUploadDao {
+//	root@localhost:3306
+    String url = "jdbc:mysql://localhost:3306/schema_1";
+    String user = "root";
+    String password = "412003";
+
+    private static final String sql = "INSERT INTO users (first_name, last_name, photo) values (?, ?, ?)";
+
+    public int uploadFile(String firstName, String lastName, InputStream file) {
+        int row = 0;
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+        	
+        } catch (ClassNotFoundException e1) {
+            // TODO Auto-generated catch block
+            e1.printStackTrace();
+        }
+
+        try (Connection connection = DriverManager.getConnection(url, user, password);
+            // Step 2:Create a statement using connection object
+            ) {  
+        	PreparedStatement preparedStatement = connection.prepareStatement(sql);
+            preparedStatement.setString(1, firstName);
+            preparedStatement.setString(2, lastName);
+            if (file != null) {
+                // fetches input stream of the upload file for the blob column
+                preparedStatement.setBlob(3, file);
+            }
+
+            // sends the statement to the database server
+            row = preparedStatement.executeUpdate();
+
+        } catch (SQLException e) {
+            // process sql exception
+            printSQLException(e);
+        }
+        return row;
+    }
+
+    private void printSQLException(SQLException ex) {
+        for (Throwable e: ex) {
+            if (e instanceof SQLException) {
+                e.printStackTrace(System.err);
+                System.err.println("SQLState: " + ((SQLException) e).getSQLState());
+                System.err.println("Error Code: " + ((SQLException) e).getErrorCode());
+                System.err.println("Message: " + e.getMessage());
+                Throwable t = ex.getCause();
+                while (t != null) {
+                    System.out.println("Cause: " + t);
+                    t = t.getCause();
+                }
+            }
+        }
+    }
+}
+
+UploadServlet.java=======================================
+
+package com.jayam;
+
+import java.io.IOException;
+import java.io.InputStream;
+
+import javax.servlet.ServletException;
+import javax.servlet.annotation.MultipartConfig;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.Part;
+
+import com.dao.FileUploadDao;
+
+@WebServlet("/uploadServlet")
+@MultipartConfig(maxFileSize = 30177215) // upload file's size up to 30MB
+public class UploadServlet extends HttpServlet {
+
+    private static final long serialVersionUID = 1 ;
+
+    private FileUploadDao fileUploadDao;
+
+    @Override
+    public void init() {
+        fileUploadDao = new FileUploadDao();
+    }
+
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+    throws ServletException, IOException {
+        // gets values of text fields
+        String firstName = request.getParameter("firstName");
+        String lastName = request.getParameter("lastName");
+
+        InputStream inputStream = null; // input stream of the upload file
+
+        String message =null;
+       
+        Part filePart = request.getPart("photo");
+        if (filePart != null) {
+            // prints out some information for debugging
+            System.out.println(filePart.getName());
+            System.out.println(filePart.getSize());
+            System.out.println(filePart.getContentType());
+
+            // obtains input stream of the upload file
+            inputStream = filePart.getInputStream();
+        }
+
+        // sends the statement to the database server
+        int row = fileUploadDao.uploadFile(firstName, lastName, inputStream);
+        if (row > 0) {
+            message = "File uploaded and saved into database";
+        }
+        else {
+			System.out.println("FILE NOT UPLOADED SUCCESFULLY");
+		}
+
+        // sets the message in request scope
+        request.setAttribute("Message", message);
+
+        // forwards to the message page
+        getServletContext().getRequestDispatcher("/message.jsp")
+            .forward(request, response);
+    }
+}
+
